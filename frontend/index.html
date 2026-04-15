@@ -309,6 +309,7 @@
 
         let selectedFile = null;
         let downloadFilename = null;
+        let paragraphs = [];
 
         // Drag and drop handlers
         dropZone.addEventListener('click', () => fileInput.click());
@@ -365,8 +366,10 @@
             formData.append('file', selectedFile);
             formData.append('direction', directionSelect.value);
 
+            paragraphs = [];
+
             try {
-                const response = await fetch('/api/translate', {
+                const response = await fetch('/api/translate/stream', {
                     method: 'POST',
                     body: formData
                 });
@@ -376,16 +379,65 @@
                     throw new Error(error.detail || '翻译失败');
                 }
 
-                const data = await response.json();
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let originalText = '';
+                let done = false;
 
-                progressFill.style.width = '100%';
-                progressText.textContent = '翻译完成!';
+                while (!done) {
+                    const { value, done: streamDone } = await reader.read();
+                    done = streamDone;
+                    if (value) {
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
 
-                originalPanel.textContent = data.original_text;
-                translatedPanel.textContent = data.translated_text;
-                bothPanel.textContent = `=== 原文 ===\n${data.original_text}\n\n=== 译文 ===\n${data.translated_text}`;
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                try {
+                                    const data = JSON.parse(line.slice(6));
 
-                downloadFilename = data.download_filename;
+                                    if (data.type === 'start') {
+                                        originalText = data.original_text;
+                                        progressText.textContent = `正在翻译... 0/${data.total}`;
+                                    } else if (data.type === 'progress') {
+                                        progressFill.style.width = data.percent + '%';
+                                        progressText.textContent = `正在翻译... ${data.completed}/${data.total}`;
+                                        paragraphs.push(data.paragraph);
+                                    } else if (data.type === 'done') {
+                                        progressFill.style.width = '100%';
+                                        progressText.textContent = '翻译完成!';
+                                    }
+                                } catch (e) {
+                                    // 忽略解析错误
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 构建结果视图
+                originalPanel.textContent = originalText;
+                translatedPanel.textContent = paragraphs.map(p => p.translated).join('\n\n');
+
+                // 构建段落对照视图
+                const comparisonLines = [];
+                for (let i = 0; i < paragraphs.length; i++) {
+                    const p = paragraphs[i];
+                    comparisonLines.push(`【段落 ${i+1}】`);
+                    comparisonLines.push(`原文：${p.original}`);
+                    comparisonLines.push('');
+                    comparisonLines.push(`译文：${p.translated}`);
+                    if (i < paragraphs.length - 1) {
+                        comparisonLines.push('');
+                        comparisonLines.push('----------------------------------------');
+                        comparisonLines.push('');
+                    }
+                }
+                bothPanel.textContent = comparisonLines.join('\n');
+
+                // 获取下载文件名
+                const allText = `=== 原文 ===\n${originalText}\n\n=== 译文 ===\n${paragraphs.map(p => p.translated).join('\n\n')}`;
+                downloadFilename = null; // 流式响应不返回filename，改用直接显示
 
                 setTimeout(() => {
                     progressSection.classList.remove('active');

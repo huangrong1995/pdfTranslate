@@ -7,24 +7,42 @@ set -e
 echo "=== PDF 翻译工具 ==="
 echo ""
 
-# 检查 Ollama 是否运行
-echo "检查 Ollama 服务..."
-if curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
-    echo "✓ Ollama 服务正在运行"
-else
-    echo "✗ Ollama 服务未运行"
-    echo "请先启动 Ollama: ollama serve"
-    exit 1
+# 加载 .env 文件
+if [ -f .env ]; then
+    echo "加载 .env 配置..."
+    export $(grep -v '^#' .env | xargs)
 fi
 
-# 检查模型是否存在
-echo "检查翻译模型..."
-if ollama list | grep -q "qwen2.5:7b-instruct-q4_0"; then
-    echo "✓ 模型已安装"
-else
-    echo "✗ 模型未安装"
-    echo "请先安装模型: ollama pull qwen2.5:7b-instruct-q4_0"
-    exit 1
+# 检查翻译后端
+USE_OLLAMA=false
+USE_DASHSCOPE=false
+
+# 检查 Ollama 是否运行
+if curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
+    if ollama list | grep -q "qwen2.5:7b-instruct-q4_0"; then
+        echo "✓ 使用 Ollama 本地模型"
+        USE_OLLAMA=true
+    fi
+fi
+
+# 检查阿里云百炼 API
+if [ -n "$DASHSCOPE_API_KEY" ]; then
+    echo "✓ 使用阿里云百炼 API"
+    USE_DASHSCOPE=true
+fi
+
+if [ "$USE_OLLAMA" = false ] && [ "$USE_DASHSCOPE" = false ]; then
+    echo ""
+    echo "⚠ 警告：未检测到可用翻译后端"
+    echo "  - Ollama 服务未运行或模型未安装"
+    echo "  - DASHSCOPE_API_KEY 环境变量未设置"
+    echo ""
+    echo "请选择以下方案之一："
+    echo "  1. 安装并启动 Ollama: ollama serve && ollama pull qwen2.5:7b-instruct-q4_0"
+    echo "  2. 设置阿里云百炼 API Key: export DASHSCOPE_API_KEY='your-api-key'"
+    echo ""
+    echo "继续启动服务，但翻译功能可能不可用..."
+    echo ""
 fi
 
 # 安装 Python 依赖

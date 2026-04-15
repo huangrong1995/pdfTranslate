@@ -1,6 +1,6 @@
 # PDF 翻译工具
 
-基于本地 LLM 的 PDF 文档翻译工具，支持英译汉和汉译英。
+基于本地 LLM 或云端 API 的 PDF 文档翻译工具，支持英译汉和汉译英。
 
 ## 功能特性
 
@@ -13,17 +13,20 @@
 
 - **后端**: FastAPI + pdfminer.six + httpx
 - **前端**: HTML + Vanilla JS（无框架依赖）
-- **翻译引擎**: Ollama + Qwen2.5-7B-Instruct（本地部署，完全免费）
+- **翻译引擎**: Ollama 本地模型 或 阿里云百炼 API（可选）
 
 ## 环境要求
 
 - Python 3.9+
-- Ollama（本地 LLM 运行时）
-- 内存 8GB+（推荐）
+- 翻译后端（二选一）：
+  - **方案 A**：Ollama（本地 LLM），内存 8GB+
+  - **方案 B**：阿里云百炼 API（DashScope）
 
 ## 快速开始
 
-### 1. 安装 Ollama
+### 方案 A：使用 Ollama 本地模型
+
+#### 1. 安装 Ollama
 
 ```bash
 # macOS/Linux
@@ -32,7 +35,7 @@ curl -fsSL https://ollama.com/install.sh | sh
 # Windows: 下载安装包 https://ollama.com/download
 ```
 
-### 2. 下载翻译模型
+#### 2. 下载翻译模型
 
 ```bash
 ollama pull qwen2.5:7b-instruct-q4_0
@@ -40,14 +43,7 @@ ollama pull qwen2.5:7b-instruct-q4_0
 
 模型大小约 4GB，INT4 量化，内存占用低。
 
-### 3. 安装 Python 依赖
-
-```bash
-cd backend
-pip install -r requirements.txt
-```
-
-### 4. 启动服务
+#### 3. 启动服务
 
 ```bash
 # 启动 Ollama 服务（后台运行）
@@ -64,7 +60,31 @@ chmod +x start.sh
 ./start.sh
 ```
 
-### 5. 开始使用
+---
+
+### 方案 B：使用阿里云百炼 API
+
+#### 1. 获取 API Key
+
+1. 访问 [阿里云百炼平台](https://bailian.console.aliyun.com/)
+2. 开通百炼服务
+3. 创建 API Key
+
+#### 2. 设置环境变量
+
+```bash
+export DASHSCOPE_API_KEY='your-api-key-here'
+```
+
+#### 3. 启动服务
+
+```bash
+uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+---
+
+### 4. 开始使用
 
 打开浏览器访问：http://localhost:8000
 
@@ -74,7 +94,7 @@ chmod +x start.sh
 pdfTranslate/
 ├── backend/
 │   ├── main.py              # FastAPI 入口
-│   ├── translator.py        # Ollama 翻译逻辑
+│   ├── translator.py        # 翻译逻辑（支持 Ollama/百炼）
 │   ├── pdf_processor.py     # PDF 文本提取
 │   └── requirements.txt     # Python 依赖
 ├── frontend/
@@ -94,6 +114,6 @@ pdfTranslate/
 
 ## 注意事项
 
-- 翻译过程在本地完成，无需上传到云端，保护隐私
-- 首次翻译需要加载模型，可能需要等待几秒
+- 优先使用 Ollama 本地模型（免费），不可用时自动切换到阿里云百炼 API
+- 阿里云百炼 API 按量计费，价格参考官方文档
 - 大文件翻译时间较长，请耐心等待
