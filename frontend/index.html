@@ -310,6 +310,7 @@
         let selectedFile = null;
         let downloadFilename = null;
         let paragraphs = [];
+        let translatedText = '';
 
         // Drag and drop handlers
         dropZone.addEventListener('click', () => fileInput.click());
@@ -436,9 +437,8 @@
                 }
                 bothPanel.textContent = comparisonLines.join('\n');
 
-                // 获取下载文件名
-                const allText = `=== 原文 ===\n${originalText}\n\n=== 译文 ===\n${paragraphs.map(p => p.translated).join('\n\n')}`;
-                downloadFilename = null; // 流式响应不返回filename，改用直接显示
+                // 存储译文文本用于下载
+                translatedText = paragraphs.map(p => p.translated).join('\n\n');
 
                 setTimeout(() => {
                     progressSection.classList.remove('active');
@@ -455,8 +455,16 @@
         });
 
         downloadBtn.addEventListener('click', () => {
-            if (downloadFilename) {
-                window.open(`/api/download/${downloadFilename}`, '_blank');
+            if (translatedText) {
+                const blob = new Blob([translatedText], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'translation.txt';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
             }
         });
 
