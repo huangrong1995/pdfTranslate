@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF 翻译工具</title>
+    <title>PDF/Word 翻译工具</title>
     <style>
         * {
             box-sizing: border-box;
@@ -238,14 +238,14 @@
 </head>
 <body>
     <div class="container">
-        <h1>PDF 翻译工具</h1>
+        <h1>PDF/Word 翻译工具</h1>
 
         <div class="upload-section">
             <div class="drop-zone" id="dropZone">
-                <p>拖拽 PDF 文件到此处，或点击选择文件</p>
-                <p class="hint">支持 .pdf 格式</p>
+                <p>拖拽 PDF 或 Word 文件到此处，或点击选择文件</p>
+                <p class="hint">支持 .pdf、.docx 格式</p>
             </div>
-            <input type="file" id="fileInput" accept=".pdf">
+            <input type="file" id="fileInput" accept=".pdf,.docx">
 
             <div class="filename" id="fileName" style="display: none;">
                 已选择: <span id="fileNameText"></span>
@@ -339,8 +339,9 @@
         });
 
         function handleFileSelect(file) {
-            if (!file.name.toLowerCase().endsWith('.pdf')) {
-                showError('请选择 PDF 文件');
+            const ext = file.name.toLowerCase().split('.').pop();
+            if (!['pdf', 'docx'].includes(ext)) {
+                showError('请选择 PDF 或 Word 文件');
                 return;
             }
 

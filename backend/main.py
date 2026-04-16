@@ -57,24 +57,28 @@ async def translate_pdf(
     direction: str = "en2zh"
 ):
     """
-    翻译上传的 PDF 文件
+    翻译上传的 PDF 或 Word 文件
 
     Args:
-        file: PDF 文件
+        file: PDF 或 Word 文件
         direction: 翻译方向 (en2zh 或 zh2en)
     """
-    if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="只支持 PDF 文件")
+    if not file.filename.lower().endswith((".pdf", ".docx")):
+        raise HTTPException(status_code=400, detail="只支持 PDF 和 Word 文件")
 
     if direction not in ("en2zh", "zh2en"):
         raise HTTPException(status_code=400, detail="direction 必须是 en2zh 或 zh2en")
 
     try:
-        # 1. 提取 PDF 文本
-        original_text = extract_text_from_pdf(file)
+        # 1. 提取文档文本
+        if file.filename.lower().endswith(".pdf"):
+            original_text = extract_text_from_pdf(file)
+        else:
+            from .docx_processor import extract_text_from_docx
+            original_text = extract_text_from_docx(file)
 
         if not original_text.strip():
-            raise HTTPException(status_code=400, detail="PDF 中没有提取到文本内容")
+            raise HTTPException(status_code=400, detail="文档中没有提取到文本内容")
 
         # 2. 翻译（返回段落对照列表）
         paragraphs = await translate_text_structured(original_text, direction)
@@ -121,24 +125,28 @@ async def translate_pdf_stream(
     direction: str = "en2zh"
 ):
     """
-    翻译上传的 PDF 文件（SSE 流式进度）
+    翻译上传的 PDF 或 Word 文件（SSE 流式进度）
 
     Args:
-        file: PDF 文件
+        file: PDF 或 Word 文件
         direction: 翻译方向 (en2zh 或 zh2en)
     """
-    if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="只支持 PDF 文件")
+    if not file.filename.lower().endswith((".pdf", ".docx")):
+        raise HTTPException(status_code=400, detail="只支持 PDF 和 Word 文件")
 
     if direction not in ("en2zh", "zh2en"):
         raise HTTPException(status_code=400, detail="direction 必须是 en2zh 或 zh2en")
 
     try:
-        # 1. 提取 PDF 文本
-        original_text = extract_text_from_pdf(file)
+        # 1. 提取文档文本
+        if file.filename.lower().endswith(".pdf"):
+            original_text = extract_text_from_pdf(file)
+        else:
+            from .docx_processor import extract_text_from_docx
+            original_text = extract_text_from_docx(file)
 
         if not original_text.strip():
-            raise HTTPException(status_code=400, detail="PDF 中没有提取到文本内容")
+            raise HTTPException(status_code=400, detail="文档中没有提取到文本内容")
 
         # 创建进度队列
         queue = asyncio.Queue()
